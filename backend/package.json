@@ -8,7 +8,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "start:prod": "node scripts/check-env.js && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && node dist/index.js",
+    "start:prod": "node scripts/check-env.js && node scripts/wait-for-db.js && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && node dist/index.js",
     "check-env": "node scripts/check-env.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

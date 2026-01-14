@@ -173,3 +173,30 @@ Nếu sau khi làm tất cả các bước trên mà vẫn lỗi:
 2. **Verify PostgreSQL service** đang chạy và accessible
 3. **Thử tạo PostgreSQL service mới** và connect lại
 4. **Check Railway documentation** về service references: https://docs.railway.app/develop/variables#referencing-other-services
+
+---
+
+## 🔌 Lỗi: Can't Reach Database Server
+
+Nếu bạn gặp lỗi: `P1001: Can't reach database server at 'postgres.railway.internal:5432'`
+
+**Nguyên nhân:** Backend service đang cố kết nối database trước khi PostgreSQL sẵn sàng.
+
+**Giải pháp:**
+
+1. **Đợi PostgreSQL sẵn sàng:**
+   - Vào PostgreSQL service → Check status phải là "Active"
+   - Đợi thêm 1-2 phút sau khi status "Active"
+   - Sau đó mới deploy backend
+
+2. **Redeploy cả 2 services:**
+   - Stop backend service
+   - Redeploy PostgreSQL service
+   - Đợi PostgreSQL "Active"
+   - Redeploy backend service
+
+3. **Check service connection:**
+   - PostgreSQL service → Settings → Connected Services
+   - Đảm bảo backend service được list
+
+**Lưu ý:** Application đã có retry logic tự động, sẽ tự động đợi và retry kết nối database. Nếu vẫn fail sau 10 lần retry, check PostgreSQL service logs.
