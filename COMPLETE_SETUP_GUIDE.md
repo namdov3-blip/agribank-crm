@@ -829,6 +829,36 @@ your-repo/
 
 ---
 
+### Issue 9: Railway Deployment - DATABASE_URL Not Found During Build
+
+**Error:** `Error: Environment variable not found: DATABASE_URL` during build phase
+
+**Cause:** Prisma migrate is running during build phase, but DATABASE_URL is only available at runtime on Railway.
+
+**Solution:**
+1. **Update Build Command** (remove migrate/seed from build):
+   - Go to Railway → Backend Service → Settings → Build Command
+   - Change from: `npm install && npm run build && npx prisma migrate deploy && npx prisma db seed`
+   - To: `npm install && npm run build`
+
+2. **Update Start Command** (run migrate/seed on startup):
+   - Go to Railway → Backend Service → Settings → Start Command
+   - Change from: `npm start`
+   - To: `npm run start:prod`
+
+3. **Verify Environment Variables:**
+   - Make sure `DATABASE_URL=${{Postgres.DATABASE_URL}}` is set in Variables tab
+   - Railway automatically injects this when PostgreSQL service is connected
+
+**Why this works:**
+- Build phase runs before database is available
+- Start phase has access to DATABASE_URL
+- The `start:prod` script runs migrations and seed before starting the server
+
+**After fixing:** Redeploy the service in Railway.
+
+---
+
 ## Deployment Guide
 
 ### Option 1: Railway (Recommended for Beginners)
@@ -905,13 +935,19 @@ git push -u origin main
    - **IMPORTANT:** Scroll down to find "Root Directory" section
    - Set "Root Directory": `backend` (this tells Railway to use the backend folder as the working directory)
    - Scroll down to find "Build Command" section
-   - Set "Build Command": `npm install && npm run build && npx prisma migrate deploy && npx prisma db seed`
-   - Set "Start Command": `npm start`
+   - Set "Build Command": `npm install && npm run build` (migrations will run on startup)
+   - Set "Start Command": `npm run start:prod` (this runs migrations and seed before starting server)
    
    **Alternative (if Root Directory setting is not available):**
-   - If you can't find "Root Directory" setting, use this build command instead:
-   - Set "Build Command": `cd backend && npm install && npm run build && npx prisma migrate deploy --schema=prisma/schema.prisma && npx prisma db seed --schema=prisma/schema.prisma`
-   - Set "Start Command": `cd backend && npm start`
+   - If you can't find "Root Directory" setting, use these commands instead:
+   - Set "Build Command": `cd backend && npm install && npm run build`
+   - Set "Start Command": `cd backend && npm run start:prod`
+   
+   **Note:** The `start:prod` script automatically runs:
+   - `prisma generate` - Generate Prisma Client
+   - `prisma migrate deploy` - Apply database migrations
+   - `prisma db seed` - Seed initial data
+   - `node dist/index.js` - Start the server
 
 6. **Deploy:**
    - Click "Deploy"
