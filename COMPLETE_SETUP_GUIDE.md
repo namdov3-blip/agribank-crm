@@ -859,6 +859,100 @@ your-repo/
 
 ---
 
+### Issue 10: Railway Deployment - DATABASE_URL is Empty String
+
+**Error:** `Error validating datasource 'db': You must provide a nonempty URL. The environment variable 'DATABASE_URL' resolved to an empty string.`
+
+**Cause:** DATABASE_URL environment variable exists but is empty, usually because:
+1. PostgreSQL service reference is incorrect
+2. PostgreSQL service is not connected to backend service
+3. Service name in reference doesn't match actual service name
+
+**Solution 1: Verify PostgreSQL Service Connection**
+1. Go to Railway project dashboard
+2. Check that PostgreSQL service shows "Active" status
+3. Click on PostgreSQL service → Settings → Check service name
+4. Go back to backend service → Variables
+5. Verify DATABASE_URL uses correct service name:
+   - If PostgreSQL service is named "Postgres": `${{Postgres.DATABASE_URL}}`
+   - If named "PostgreSQL": `${{PostgreSQL.DATABASE_URL}}`
+   - If named something else: `${{YourServiceName.DATABASE_URL}}`
+
+**Solution 2: Reconnect Services**
+1. Go to PostgreSQL service → Settings
+2. Look for "Service Connections" or "Connected Services"
+3. Ensure backend service is listed
+4. If not, Railway should auto-connect, but you may need to redeploy
+
+**Solution 3: Manual DATABASE_URL Setup**
+1. Go to PostgreSQL service → Variables tab
+2. Find `DATABASE_URL` variable (Railway creates this automatically)
+3. Copy the full connection string
+4. Go to backend service → Variables tab
+5. Add or update `DATABASE_URL` with the copied value directly (not using `${{...}}` syntax)
+6. Format should be: `postgresql://user:password@host:port/database`
+
+**Solution 4: Check Service Deployment Order**
+1. Ensure PostgreSQL service is fully deployed first
+2. Wait for PostgreSQL to show "Active" status
+3. Then deploy or redeploy backend service
+4. Railway needs PostgreSQL to be ready before injecting DATABASE_URL
+
+**Solution 5: Use Environment Check Script**
+The application now includes an environment check script that will:
+- Validate all required environment variables before starting
+- Show which variables are missing or empty
+- Provide helpful error messages
+
+If you see the check script errors, follow its troubleshooting tips.
+
+**After fixing:** Redeploy the backend service in Railway.
+
+**📖 Xem hướng dẫn chi tiết từng bước:** Xem file `RAILWAY_DATABASE_URL_FIX.md` trong repository.
+
+---
+
+### Issue 11: Railway Deployment - Can't Reach Database Server
+
+**Error:** `P1001: Can't reach database server at 'postgres.railway.internal:5432'`
+
+**Cause:** Backend service is trying to connect to PostgreSQL before it's fully ready, or there's a network connectivity issue.
+
+**Solution 1: Wait for PostgreSQL Service**
+1. Go to Railway project dashboard
+2. Check PostgreSQL service status
+3. Ensure it shows "Active" (not "Deploying" or "Failed")
+4. Wait 1-2 minutes after PostgreSQL shows "Active"
+5. Then redeploy backend service
+
+**Solution 2: Check Service Connection**
+1. Go to PostgreSQL service → Settings
+2. Verify backend service is listed in "Connected Services"
+3. If not, Railway should auto-connect, but you may need to redeploy
+
+**Solution 3: Verify DATABASE_URL**
+1. Go to backend service → Variables
+2. Check DATABASE_URL value
+3. It should use internal hostname: `postgres.railway.internal` or `postgres.railway.app`
+4. If using external hostname, Railway services should use internal hostname for better connectivity
+
+**Solution 4: Retry Logic (Already Implemented)**
+The application now includes automatic retry logic:
+- Waits for database connection with exponential backoff
+- Retries up to 10 times
+- Shows helpful error messages if all retries fail
+- The `wait-for-db.js` script runs before migrations
+
+**Solution 5: Redeploy Both Services**
+1. Stop backend service (if running)
+2. Redeploy PostgreSQL service
+3. Wait for PostgreSQL to be "Active"
+4. Redeploy backend service
+
+**After fixing:** The retry script will automatically wait for database. If it still fails after all retries, check PostgreSQL service logs.
+
+---
+
 ## Deployment Guide
 
 ### Option 1: Railway (Recommended for Beginners)
