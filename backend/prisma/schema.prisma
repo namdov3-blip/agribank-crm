@@ -1,0 +1,354 @@
+// Prisma Schema for Agribank CRM
+// Multi-tenancy with organization isolation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUM TYPES
+// ============================================
+
+enum TransactionStatus {
+  PENDING   // Chưa giải ngân
+  DISBURSED // Đã giải ngân
+  HOLD      // Tồn đọng/Giữ hộ
+}
+
+enum BankTransactionType {
+  DEPOSIT    // Nạp tiền
+  WITHDRAW   // Rút tiền
+  ADJUSTMENT // Điều chỉnh
+}
+
+enum UserRole {
+  Admin
+  User1
+  User2
+  PMB
+}
+
+// ============================================
+// ORGANIZATIONS (TỔ CHỨC)
+// ============================================
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  phone     String?
+  email     String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users               User[]
+  projects            Project[]
+  transactions        Transaction[]
+  households          Household[]
+  bankAccount         BankAccount?
+  bankTransactions    BankTransaction[]
+  auditLogs           AuditLog[]
+  interestSettings    InterestSetting[]
+  uploadedFiles       UploadedFile[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("organizations")
+}
+
+// ============================================
+// USERS (NGƯỜI DÙNG)
+// ============================================
+
+model User {
+  id             String   @id @default(uuid())
+  organizationId String
+  username       String
+  passwordHash   String
+  fullName       String
+  email          String?
+  role           UserRole
+  permissions    Json     @default("[]") // Array of permission strings
+  isActive       Boolean  @default(true)
+  lastLogin      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization         Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdProjects      Project[]         @relation("ProjectCreator")
+  createdTransactions  Transaction[]     @relation("TransactionCreator")
+  auditLogs            AuditLog[]
+
+  // Unique constraint: username is unique per organization
+  @@unique([organizationId, username])
+  createdBankTxs       BankTransaction[] @relation("BankTxCreator")
+  createdInterestSettings InterestSetting[] @relation("InterestSettingCreator")
+  uploadedFiles        UploadedFile[]    @relation("FileUploader")
+
+  @@index([organizationId])
+  @@index([username])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ============================================
+// PROJECTS (DỰ ÁN)
+// ============================================
+
+model Project {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  code               String
+  name               String
+  location           String?
+  totalBudget        BigInt   @default(0)
+  startDate          DateTime?
+  uploadDate         DateTime @default(now())
+  interestStartDate  DateTime // Ngày giải ngân & tính lãi
+  status             String   @default("Active") // Active, Completed, Planning
+  createdById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  transactions  Transaction[]
+  uploadedFiles UploadedFile[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([code])
+  @@index([status])
+  @@map("projects")
+}
+
+// ============================================
+// HOUSEHOLDS (HỘ DÂN)
+// ============================================
+
+model Household {
+  id             String   @id @default(uuid())
+  organizationId String
+  householdId    String   // Mã hộ dân
+  name           String
+  cccd           String?
+  address        String?
+  landOrigin     String?
+  landArea       Float    @default(0)
+  decisionNumber String?
+  decisionDate   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([organizationId, householdId])
+  @@index([organizationId])
+  @@index([name])
+  @@index([cccd])
+  @@map("households")
+}
+
+// ============================================
+// TRANSACTIONS (GIAO DỊCH)
+// ============================================
+
+model Transaction {
+  id                    String            @id @default(uuid())
+  organizationId        String
+  projectId             String
+  householdId           String
+
+  // Compensation Details
+  landAmount            BigInt            @default(0)
+  assetAmount           BigInt            @default(0)
+  houseAmount           BigInt            @default(0)
+  supportAmount         BigInt            @default(0)
+  totalApproved         BigInt            // Tổng tiền duyệt
+  supplementaryAmount   BigInt            @default(0) // Tiền bổ sung
+  supplementaryNote     String?
+
+  // Status & Dates
+  status                TransactionStatus @default(PENDING)
+  disbursementDate      DateTime?
+  effectiveInterestDate DateTime? // Ngày tính lãi riêng (override project date)
+
+  // Notes
+  notes                 String?
+
+  createdById           String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  // Relations
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  household        Household          @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy        User?              @relation("TransactionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  history          TransactionHistory[]
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([householdId])
+  @@index([status])
+  @@index([disbursementDate])
+  @@map("transactions")
+}
+
+// ============================================
+// TRANSACTION HISTORY (LỊCH SỬ GIAO DỊCH)
+// ============================================
+
+model TransactionHistory {
+  id            String   @id @default(uuid())
+  transactionId String
+  action        String   // "Tạo mới", "Chuyển sang Đã giải ngân", etc.
+  actorName     String?
+  actorRole     String?
+  details       String?
+  totalAmount   BigInt?
+  timestamp     DateTime @default(now())
+
+  // Relations
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@map("transaction_history")
+}
+
+// ============================================
+// BANK ACCOUNTS (TÀI KHOẢN NGÂN HÀNG)
+// ============================================
+
+model BankAccount {
+  id                String   @id @default(uuid())
+  organizationId    String   @unique
+  bankName          String?
+  accountNumber     String?
+  openingBalance    BigInt   @default(0)
+  currentBalance    BigInt   @default(0)
+  reconciledBalance BigInt   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankTransactions BankTransaction[]
+
+  @@index([organizationId])
+  @@map("bank_accounts")
+}
+
+// ============================================
+// BANK TRANSACTIONS (GIAO DỊCH NGÂN HÀNG)
+// ============================================
+
+model BankTransaction {
+  id             String              @id @default(uuid())
+  organizationId String
+  bankAccountId  String
+  type           BankTransactionType
+  amount         BigInt              // Signed: positive for deposit, negative for withdraw
+  note           String?
+  runningBalance BigInt              @default(0)
+  transactionDate DateTime           @default(now())
+  createdById    String?
+  createdAt      DateTime            @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankAccount  BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("BankTxCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([bankAccountId])
+  @@index([transactionDate])
+  @@map("bank_transactions")
+}
+
+// ============================================
+// AUDIT LOGS (NHẬT KÝ KIỂM TOÁN)
+// ============================================
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  actorName      String?
+  actorRole      String?
+  action         String
+  target         String?
+  details        String?
+  ipAddress      String?
+  userAgent      String?
+  timestamp      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([timestamp(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ============================================
+// INTEREST SETTINGS (CÀI ĐẶT LÃI SUẤT)
+// ============================================
+
+model InterestSetting {
+  id             String   @id @default(uuid())
+  organizationId String
+  annualRate     Float    // VD: 8.5 = 8.5%
+  effectiveFrom  DateTime
+  note           String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("InterestSettingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([effectiveFrom(sort: Desc)])
+  @@map("interest_settings")
+}
+
+// ============================================
+// UPLOADED FILES (FILE UPLOAD)
+// ============================================
+
+model UploadedFile {
+  id               String   @id @default(uuid())
+  organizationId   String
+  projectId        String?
+  originalFilename String
+  storedFilename   String
+  fileSize         BigInt?
+  mimeType         String?
+  uploadPath       String?
+  uploadedById     String?
+  createdAt        DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation("FileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("uploaded_files")
+}
