@@ -150,7 +150,13 @@ export const confirmImportSchema = z.object({
       landArea: z.number().nonnegative().optional(),
       decisionNumber: z.string(),
       decisionDate: z.string(),
-      amount: z.number().positive('Amount must be positive')
+      amount: z.number().positive('Amount must be positive'),
+      metadata: z.object({
+        spa: z.string().optional(),
+        sttDS: z.string().optional(),
+        quyetDinh: z.string().optional(),
+        loaiChiTra: z.string().optional()
+      }).optional()
     })
   ).min(1, 'At least one transaction is required')
 });

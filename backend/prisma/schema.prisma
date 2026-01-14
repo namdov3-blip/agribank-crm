@@ -188,6 +188,9 @@ model Transaction {
   // Notes
   notes                 String?
 
+  // Metadata from Excel (loaiChiTra, spa, sttDS, etc.)
+  metadata              Json?
+
   createdById           String?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt

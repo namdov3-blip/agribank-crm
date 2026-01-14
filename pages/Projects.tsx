@@ -208,6 +208,7 @@ export const Projects: React.FC<ProjectsProps> = ({ projects, transactions, inte
         decisionNumber: tx.household.decisionNumber,
         decisionDate: tx.household.decisionDate,
         amount: tx.compensation.totalApproved,
+        metadata: tx.metadata, // Include metadata (loaiChiTra, spa, sttDS, etc.)
       }));
 
       // Call API to confirm import (creates project, households, transactions)

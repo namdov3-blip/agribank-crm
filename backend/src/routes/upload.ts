@@ -186,6 +186,7 @@ router.post(
             householdId: household.id,
             totalApproved: BigInt(Math.round(txData.amount)),
             status: 'PENDING',
+            metadata: txData.metadata || null, // Save metadata (loaiChiTra, spa, sttDS, etc.)
             createdById: req.user!.id
           }
         });

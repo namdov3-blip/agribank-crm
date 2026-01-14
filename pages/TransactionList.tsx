@@ -4,7 +4,8 @@ import { Transaction, Project, TransactionStatus, User } from '../types';
 import { GlassCard } from '../components/GlassCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCurrency, formatDate, calculateInterest, exportTransactionsToExcel, getOrgAbbreviation, generateTransactionCode } from '../utils/helpers';
-import { Search, Filter, Download, Folder, Users, CheckCircle, Clock, DollarSign, PiggyBank, ChevronLeft, ChevronRight, Eye, Printer } from 'lucide-react';
+import { Search, Filter, Download, Folder, Users, CheckCircle, Clock, DollarSign, PiggyBank, ChevronLeft, ChevronRight, Eye, FileText } from 'lucide-react';
+import { PaymentSlipPreview } from '../components/PaymentSlipPreview';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -20,6 +21,7 @@ interface TransactionListProps {
 export const TransactionList: React.FC<TransactionListProps> = ({ transactions, projects, interestRate, onSelect, onPrint, searchTerm, setSearchTerm, currentUser }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [previewTransaction, setPreviewTransaction] = useState<Transaction | null>(null);
 
   // Filter Data
   const filtered = useMemo(() => {
@@ -237,6 +239,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                 <th className="px-4 py-3.5 border-r border-slate-200 min-w-[100px]">Mã Dự Án</th>
                 <th className="px-4 py-3.5 border-r border-slate-200 min-w-[150px]">Họ và tên</th>
                 <th className="px-4 py-3.5 border-r border-slate-200 min-w-[120px]">Quyết định</th>
+                <th className="px-4 py-3.5 border-r border-slate-200 min-w-[120px]">Loại hình trả</th>
                 <th className="px-4 py-3.5 border-r border-slate-200 min-w-[130px]">Ngày GN & Tính lãi</th>
                 <th className="px-4 py-3.5 text-right border-r border-slate-200 min-w-[130px]">Tổng phê duyệt</th>
                 <th className="px-4 py-3.5 text-right border-r border-slate-200 min-w-[120px]">Lãi phát sinh</th>
@@ -319,6 +322,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                       </div>
                     </td>
                     <td className="px-4 py-3 border-r border-slate-200">
+                      <span className="text-xs font-medium text-slate-700">{t.metadata?.loaiChiTra || '-'}</span>
+                    </td>
+                    <td className="px-4 py-3 border-r border-slate-200">
                       <div className="flex flex-col">
                         <span className={`text-xs ${dateColorClass}`}>{displayDateStr}</span>
                         <span className="text-[10px] text-slate-400 italic font-medium">{dateNote}</span>
@@ -343,29 +349,31 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
                     <td className="px-4 py-3 border-r border-slate-200 text-center">
                       <StatusBadge status={t.status} />
                     </td>
-                    <td className="px-4 py-3 text-center space-x-1">
-                      {/* Nút xem chi tiết */}
-                      <button
-                        className="text-slate-400 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded transition-all"
-                        title="Chi tiết"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelect(t);
-                        }}
-                      >
-                        <Eye size={16} strokeWidth={2.5} />
-                      </button>
-                      {/* Nút in phiếu chi */}
-                      <button
-                        className="text-slate-400 hover:text-emerald-600 p-1.5 hover:bg-emerald-50 rounded transition-all"
-                        title="In phiếu chi"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPrint(t);
-                        }}
-                      >
-                        <Printer size={16} strokeWidth={2.5} />
-                      </button>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Nút xem chi tiết */}
+                        <button
+                          className="text-slate-400 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded transition-all"
+                          title="Chi tiết"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(t);
+                          }}
+                        >
+                          <Eye size={16} strokeWidth={2.5} />
+                        </button>
+                        {/* Nút preview phiếu chi */}
+                        <button
+                          className="text-slate-400 hover:text-emerald-600 p-1.5 hover:bg-emerald-50 rounded transition-all"
+                          title="Xem phiếu chi"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewTransaction(t);
+                          }}
+                        >
+                          <FileText size={16} strokeWidth={2.5} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -404,6 +412,22 @@ export const TransactionList: React.FC<TransactionListProps> = ({ transactions, 
            </div>
         </div>
       </GlassCard>
+
+      {/* Payment Slip Preview Modal */}
+      {previewTransaction && (
+        <PaymentSlipPreview
+          transaction={previewTransaction}
+          project={projects.find(p => p.id === previewTransaction.projectId)}
+          interestRate={interestRate}
+          interestStartDate={projects.find(p => p.id === previewTransaction.projectId)?.interestStartDate}
+          organizationName={currentUser?.organization || 'Đông Anh'}
+          currentUser={currentUser ? { name: currentUser.name } : undefined}
+          onClose={() => setPreviewTransaction(null)}
+          onPrint={() => {
+            window.print();
+          }}
+        />
+      )}
     </div>
   );
 };

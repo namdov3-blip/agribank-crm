@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
-import { Transaction, TransactionStatus, User, AuditLogItem, BankTransactionType } from '../types';
+import { Transaction, TransactionStatus, User, AuditLogItem, BankTransactionType, Project } from '../types';
 import { formatCurrency, formatDate, formatDateForPrint, formatCurrencyToWords, calculateInterest, formatNumberWithComma, parseNumberFromComma } from '../utils/helpers';
-import { X, Wallet, FileText, CheckCircle, Clock, History, CreditCard, Scale, Printer, Undo2, ArrowDownCircle, Edit2, Save, Plus } from 'lucide-react';
+import { X, Wallet, FileText, CheckCircle, Clock, History, CreditCard, Scale, Printer, Undo2, ArrowDownCircle, Edit2, Save, Plus, Eye } from 'lucide-react';
 import { GlassCard } from './GlassCard';
+import { PaymentSlipPreview } from './PaymentSlipPreview';
 
 interface TransactionModalProps {
   transaction: Transaction | null;
   interestRate: number;
   projectCode?: string;
+  project?: Project;
   interestStartDate?: string; // Ngày GN của dự án (Mốc tính lãi)
   onClose: () => void;
   onStatusChange: (id: string, status: TransactionStatus) => void;
@@ -17,20 +19,25 @@ interface TransactionModalProps {
   currentUser: User | null;
   setAuditLogs: React.Dispatch<React.SetStateAction<AuditLogItem[]>>;
   handleAddBankTransaction: (type: BankTransactionType, amount: number, note: string, date: string) => void;
+  autoPrint?: boolean;
+  organizationName?: string;
 }
 
-export const TransactionModal: React.FC<TransactionModalProps> = ({ 
-  transaction, 
-  interestRate, 
-  projectCode, 
-  interestStartDate, 
-  onClose, 
-  onStatusChange, 
+export const TransactionModal: React.FC<TransactionModalProps> = ({
+  transaction,
+  interestRate,
+  projectCode,
+  project,
+  interestStartDate,
+  onClose,
+  onStatusChange,
   onRefund,
   onUpdateTransaction,
   currentUser,
   setAuditLogs,
-  handleAddBankTransaction
+  handleAddBankTransaction,
+  autoPrint = false,
+  organizationName = 'Đông Anh'
 }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [supplementaryAmount, setSupplementaryAmount] = useState(transaction?.supplementaryAmount || 0);
@@ -39,6 +46,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editedTransaction, setEditedTransaction] = useState<Transaction | null>(null);
   const [localStatus, setLocalStatus] = useState(transaction?.status || TransactionStatus.PENDING);
+  const [showPaymentSlipPreview, setShowPaymentSlipPreview] = useState(false);
 
   if (!transaction) return null;
 
@@ -155,175 +163,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     window.print();
   };
 
+  // Nếu được gọi ở chế độ autoPrint (từ nút In phiếu), tự động mở preview
+  React.useEffect(() => {
+    if (autoPrint) {
+      // Delay nhẹ để DOM kịp render trước khi gọi print
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPrint]);
+
   // Generate QR Code URL using a simple API (no extra deps required)
-  // Encodes: ID|AMOUNT|NAME for quick scanning verification
-  const qrData = `${transaction.id}|${totalAmount}|${transaction.household.name}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+  // Encode URL xác nhận giao dịch để khi quét sẽ mở màn hình xác nhận trên mobile
+  const qrData = `https://agribank-management.vercel.app/confirm?tx=${transaction.id}`;
+  // Sử dụng Vercel API endpoint để generate QR code
+  const qrUrl = `https://agribank-management.vercel.app/api/qr/${transaction.id}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200 print:p-0 print:bg-white print:static">
       
-      {/* CSS for Printing */}
-      <style>{`
-        @media print {
-          @page {
-            size: A4;
-            margin: 5mm !important;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #printable-area, #printable-area * {
-            visibility: visible !important;
-          }
-          #printable-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-height: 100vh !important;
-            height: 100vh !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-            color: black !important;
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-            display: block !important;
-            overflow: hidden !important;
-            box-sizing: border-box !important;
-          }
-          #printable-area > div {
-            max-height: 100% !important;
-            height: 100% !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            box-sizing: border-box !important;
-          }
-          .no-print {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          /* Hide Sidebar and Background blobs */
-          nav, aside, .fixed.bottom-0, .fixed.top-0 {
-             display: none !important;
-             visibility: hidden !important;
-          }
-        }
-      `}</style>
-
-      {/* --- PRINTABLE RECEIPT TEMPLATE (Hidden on screen, Visible on print) --- */}
-      <div id="printable-area" className="hidden print:block print:visible" style={{ display: 'none' }}>
-        <div className="w-full h-full p-2 flex flex-col justify-between" style={{ fontFamily: 'Arial, sans-serif', fontSize: '10px', lineHeight: '1.2', color: '#000', padding: '8px', boxSizing: 'border-box' }}>
-          {/* Header */}
-          <div className="text-center" style={{ marginBottom: '4px' }}>
-            <p className="font-bold" style={{ fontSize: '11px', marginBottom: '1px', lineHeight: '1.2' }}>UBND xã Đông Anh</p>
-            <p className="font-bold" style={{ fontSize: '11px', marginBottom: '1px', lineHeight: '1.2' }}>Ban quản lý Dự án đầu tư – hạ tầng</p>
-            <p style={{ fontSize: '9px', marginBottom: '1px', lineHeight: '1.2' }}>Số 68 đường Cao Lỗ, xã Đông Anh, Hà Nội</p>
-            <p className="font-bold" style={{ fontSize: '9px', lineHeight: '1.2' }}>Mẫu số C41 - BB</p>
-          </div>
-
-          {/* Title */}
-          <div className="text-center" style={{ marginBottom: '4px' }}>
-            <h1 className="font-bold uppercase" style={{ fontSize: '14px', marginBottom: '2px', lineHeight: '1.2' }}>PHIẾU CHI</h1>
-            <div className="flex justify-between items-start" style={{ fontSize: '9px', lineHeight: '1.2' }}>
-              <div className="text-left">
-                <p>{formatDateForPrint(new Date().toISOString())}</p>
-              </div>
-              <div className="text-right">
-                <p>Số: {transaction.id}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quyết định số và Nợ/Có */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p style={{ marginBottom: '1px' }}>Quyết định số: {transaction.household.decisionNumber}</p>
-            <div className="flex gap-4">
-              <p>Nợ: {formatNumberWithComma(totalAmount).replace(/,/g, '.')}</p>
-              <p>Có: {formatNumberWithComma(totalAmount).replace(/,/g, '.')}</p>
-            </div>
-
-          </div>
-
-          {/* Họ và tên người nhận tiền */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p><strong>Họ và tên người nhận tiền:</strong> {transaction.household.name}</p>
-          </div>
-
-          {/* Địa chỉ */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p><strong>Địa chỉ:</strong> {transaction.household.address}</p>
-          </div>
-
-          {/* Nội dung */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p>
-              <strong>Nội dung:</strong> Chi trả tiền bồi thường, hỗ trợ GPMB theo quyết định số {transaction.household.decisionNumber} ngày {formatDate(transaction.household.decisionDate)} thuộc dự án: {projectCode ? `(Mã dự án: ${projectCode})` : ''}
-            </p>
-          </div>
-
-          {/* Số tiền */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p><strong>Số tiền:</strong> {formatNumberWithComma(totalAmount).replace(/,/g, '.')} đồng</p>
-            <p style={{ marginTop: '1px' }}>
-              <strong>Trong đó:</strong> Gốc {formatNumberWithComma(transaction.compensation.totalApproved).replace(/,/g, '.')} đồng
-              {interest > 0 && <>; Lãi phát sinh {formatNumberWithComma(interest).replace(/,/g, '.')} đồng</>}
-              {supplementary !== 0 && <>; Bổ sung {formatNumberWithComma(supplementary).replace(/,/g, '.')} đồng</>}
-            </p>
-          </div>
-
-          {/* Viết bằng chữ */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p><strong>(Viết bằng chữ):</strong> {formatCurrencyToWords(totalAmount)} ./.</p>
-          </div>
-
-          {/* Kèm theo */}
-          <div style={{ fontSize: '9px', marginBottom: '2px', lineHeight: '1.2' }}>
-            <p><strong>Kèm theo:</strong> Chứng từ liên quan</p>
-          </div>
-
-          {/* Đã nhận đủ số tiền */}
-          <div className="border-t border-black" style={{ fontSize: '9px', marginBottom: '4px', paddingTop: '2px', borderTopWidth: '1px', lineHeight: '1.2' }}>
-            <p className="font-bold" style={{ marginBottom: '1px' }}>Đã nhận đủ số tiền</p>
-            <p style={{ marginBottom: '1px' }}>- Bằng số: {formatNumberWithComma(totalAmount).replace(/,/g, '.')} đồng</p>
-            <p>- Bằng chữ: {formatCurrencyToWords(totalAmount)}</p>
-          </div>
-
-          {/* Chữ ký */}
-          <div className="flex justify-between items-end" style={{ fontSize: '9px', lineHeight: '1.2' }}>
-            <div className="text-center flex-1">
-              <p className="font-bold" style={{ marginBottom: '1px' }}>Người lập biểu</p>
-              <p className="italic" style={{ fontSize: '8px', marginBottom: '8px' }}>(Ký, họ tên)</p>
-              <p className="font-bold" style={{ fontSize: '9px' }}>{currentUser?.name || "Hệ thống"}</p>
-            </div>
-            <div className="text-center flex-1">
-              <p className="font-bold" style={{ marginBottom: '1px' }}>Thủ quỹ</p>
-              <p className="italic" style={{ fontSize: '8px', marginBottom: '8px' }}>(Ký, họ tên)</p>
-              <p className="font-bold" style={{ fontSize: '9px' }}>Nguyễn Hương Ly</p>
-            </div>
-            <div className="text-center flex-1">
-              <p className="font-bold" style={{ marginBottom: '1px' }}>Người nhận tiền</p>
-              <p className="italic" style={{ fontSize: '8px', marginBottom: '8px' }}>(Ký, họ tên)</p>
-              <p className="font-bold" style={{ fontSize: '9px' }}>{transaction.household.name}</p>
-            </div>
-          </div>
-
-          {/* Ngày ký */}
-          <div className="text-right" style={{ fontSize: '9px', marginTop: '2px', lineHeight: '1.2' }}>
-            <p>{formatDateForPrint(new Date().toISOString())}</p>
-          </div>
-        </div>
-      </div>
-
       {/* --- WEB UI --- */}
       <GlassCard className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative bg-white/95 border-slate-300 shadow-2xl ring-1 ring-black/5 no-print">
         
@@ -372,14 +231,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       <p className={`text-lg font-bold ${interest > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
                         {interest > 0 ? '+' : ''}{formatCurrency(interest)}
                       </p>
-                      <div className="text-[10px] text-slate-500 mt-1 font-medium flex items-center gap-1">
-                        <Clock size={10} />
-                        {isDisbursed 
-                           ? `Chốt đến ${formatDate(transaction.disbursementDate || '')}` 
-                           : (displayStartDate)
-                              ? `Tính từ ${formatDate(displayStartDate.toISOString())}`
-                              : 'Chưa bắt đầu tính lãi'
-                        }
+                      <div className="text-[10px] text-slate-500 mt-1 font-medium flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
+                          <Clock size={10} />
+                          <span>
+                            {isDisbursed 
+                              ? `Chốt đến ${formatDate(transaction.disbursementDate || '')}` 
+                              : 'Đang tính lãi'}
+                          </span>
+                        </div>
+                        <span className="italic text-[9px] text-slate-400">
+                          Ghi chú: tính từ ngày GN &amp; tính lãi
+                        </span>
                       </div>
                   </div>
                </div>
@@ -603,15 +466,15 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           {/* RIGHT: Actions */}
           <div className="w-full md:w-80 bg-slate-50 border-l border-slate-200 p-8 flex flex-col items-center justify-between">
             <div className="w-full text-center space-y-6">
-               <div className="relative group mx-auto w-max" onClick={handlePrint}>
-                 <div className="w-48 h-48 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-center relative overflow-hidden">
+               <div className="relative group mx-auto w-max" onClick={() => setShowPaymentSlipPreview(true)}>
+                 <div className="w-48 h-48 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-center relative overflow-hidden cursor-pointer">
                     {/* Display Real QR Code if possible, otherwise use large icon */}
                     <img src={qrUrl} alt="Scan QR" className="w-full h-full object-contain" />
                  </div>
                  <div className="absolute inset-0 bg-blue-900/10 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl cursor-pointer shadow-inner border border-slate-200">
                    <div className="bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                      <Printer size={16} className="text-blue-600"/>
-                      <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">In phiếu chi</span>
+                      <Eye size={16} className="text-blue-600"/>
+                      <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Xem phiếu chi</span>
                    </div>
                  </div>
                </div>
@@ -677,6 +540,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
         </div>
       </GlassCard>
+
+      {/* Payment Slip Preview Modal */}
+      {showPaymentSlipPreview && (
+        <PaymentSlipPreview
+          transaction={transaction}
+          project={project}
+          interestRate={interestRate}
+          interestStartDate={interestStartDate}
+          organizationName={organizationName}
+          currentUser={currentUser ? { name: currentUser.name } : undefined}
+          onClose={() => setShowPaymentSlipPreview(false)}
+          onPrint={() => window.print()}
+        />
+      )}
     </div>
   );
 };

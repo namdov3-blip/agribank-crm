@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter } from 'react-router-dom';
+import { HashRouter, BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
@@ -9,6 +9,7 @@ import { TransactionModal } from './components/TransactionModal';
 import { BankBalance } from './pages/BankBalance';
 import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
+import { ConfirmPayment } from './pages/ConfirmPayment';
 import {
   Transaction,
   TransactionStatus,
@@ -570,6 +571,29 @@ const App: React.FC = () => {
     );
   }
 
+  // Check if this is a /confirm page request
+  const isConfirmPage = window.location.pathname === '/confirm' || window.location.pathname.startsWith('/confirm');
+
+  // Render Confirm Payment page for QR scanning
+  if (isConfirmPage) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/confirm"
+            element={
+              <ConfirmPayment
+                currentUser={currentUser}
+                interestRate={interestRate}
+                onLogin={handleLogin}
+              />
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
     <HashRouter>
       <div className="min-h-screen text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -578,10 +602,11 @@ const App: React.FC = () => {
           {renderContent()}
         </main>
         {selectedTransaction && (
-          <TransactionModal 
-            transaction={selectedTransaction} 
+          <TransactionModal
+            transaction={selectedTransaction}
             interestRate={interestRate}
             projectCode={projects.find(p => p.id === selectedTransaction.projectId)?.code}
+            project={projects.find(p => p.id === selectedTransaction.projectId)}
             interestStartDate={projects.find(p => p.id === selectedTransaction.projectId)?.interestStartDate}
             onClose={() => {
               setSelectedTransaction(null);
@@ -593,7 +618,7 @@ const App: React.FC = () => {
             currentUser={currentUser}
             setAuditLogs={setAuditLogs}
             handleAddBankTransaction={handleAddBankTransaction}
-            autoPrint={autoPrint}
+            organizationName={currentUser?.organization || 'Đông Anh'}
           />
         )}
       </div>
