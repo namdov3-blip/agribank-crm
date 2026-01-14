@@ -1136,7 +1136,26 @@ git push -u origin main
 
 ---
 
-### Option 2: Render (Alternative)
+### Option 2: Supabase Database + Railway/Render Backend
+
+**Why Supabase:**
+- ✅ Free tier: 500MB database, 2GB bandwidth
+- ✅ Built-in connection pooling
+- ✅ Full-featured dashboard
+- ✅ Automatic backups
+- ✅ Better for production scaling
+
+**Setup:**
+1. Create Supabase project: https://supabase.com
+2. Get database connection string
+3. Deploy backend on Railway/Render (same as Option 1)
+4. Use Supabase connection string instead of Railway PostgreSQL
+
+**📖 Detailed Guide:** See `SUPABASE_DEPLOYMENT_GUIDE.md` in repository.
+
+---
+
+### Option 3: Render (Alternative)
 
 **Similar to Railway:**
 - Free tier available
@@ -1151,7 +1170,7 @@ git push -u origin main
 
 ---
 
-### Option 3: VPS (Advanced)
+### Option 4: VPS (Advanced)
 
 **For advanced users only:**
 
