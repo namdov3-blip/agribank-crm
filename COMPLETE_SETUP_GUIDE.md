@@ -1086,8 +1086,27 @@ git push -u origin main
    - Wait ~5 minutes for deployment
 
 8. **Get Backend URL:**
-   - Still in the same backend service → "Settings" tab → "Domains" section
-   - Copy the URL (e.g., `https://agribank-backend-production.up.railway.app`)
+   - **Cách 1: Từ Settings (Khuyến nghị)**
+     - Vào backend service → **"Settings"** tab
+     - Scroll xuống phần **"Domains"** hoặc **"Networking"**
+     - Tìm **"Public Domain"** hoặc **"Generate Domain"**
+     - Click **"Generate Domain"** nếu chưa có
+     - Copy URL (ví dụ: `https://agribank-backend-production.up.railway.app`)
+   
+   - **Cách 2: Từ Service Overview**
+     - Vào backend service (click vào service name)
+     - Ở phần trên cùng, bạn sẽ thấy URL
+     - Hoặc click vào icon **"Open"** hoặc **"Visit"**
+   
+   - **Cách 3: Từ Deployments**
+     - Vào **"Deployments"** tab
+     - Click vào deployment mới nhất
+     - URL sẽ hiển thị ở đó
+   
+   **Lưu ý:** 
+   - URL sẽ có dạng: `https://[service-name].up.railway.app`
+   - API base URL sẽ là: `https://[service-name].up.railway.app/api`
+   - Railway tự động tạo HTTPS domain
 
 8. **Test Backend:**
    - Open: `https://your-backend-url.railway.app/health`
