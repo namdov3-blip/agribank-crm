@@ -6,7 +6,7 @@
  * PATCH /api/bank/account/opening-balance - Adjust opening balance
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate, createBankTransactionSchema, adjustOpeningBalanceSchema } from '../middleware/validation';
@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
 router.get(
   '/account',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const account = await prisma.bankAccount.findUnique({
       where: { organizationId: req.user!.organizationId }
     });
@@ -49,7 +49,7 @@ router.get(
 router.get(
   '/transactions',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const transactions = await prisma.bankTransaction.findMany({
       where: { organizationId: req.user!.organizationId },
       orderBy: { transactionDate: 'asc' }
@@ -64,7 +64,7 @@ router.post(
   '/transactions',
   authenticate,
   validate(createBankTransactionSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { type, amount, note, transactionDate } = req.body;
 
     const bankAccount = await prisma.bankAccount.findUnique({
@@ -123,7 +123,7 @@ router.patch(
   '/account/opening-balance',
   authenticate,
   validate(adjustOpeningBalanceSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { openingBalance } = req.body;
 
     const account = await prisma.bankAccount.update({

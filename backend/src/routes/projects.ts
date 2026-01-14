@@ -7,7 +7,7 @@
  * DELETE /api/projects/:id - Delete project
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate, createProjectSchema, updateProjectSchema } from '../middleware/validation';
@@ -23,7 +23,7 @@ const prisma = new PrismaClient();
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const projects = await prisma.project.findMany({
       where: orgFilter,
@@ -51,7 +51,7 @@ router.post(
   '/',
   authenticate,
   validate(createProjectSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const project = await prisma.project.create({
       data: {
         ...req.body,
@@ -82,7 +82,7 @@ router.post(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const project = await prisma.project.findFirst({
       where: {
@@ -106,7 +106,7 @@ router.put(
   '/:id',
   authenticate,
   validate(updateProjectSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const project = await prisma.project.update({
       where: {
@@ -139,7 +139,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const projectId = req.params.id;
     const orgFilter = await getOrganizationFilter(req.user!);
 

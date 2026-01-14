@@ -14,7 +14,6 @@ import { validate, updateInterestRateSchema } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../types';
 import { convertBigIntsToNumbers } from '../utils/helpers';
-import { calculateTransactionInterest } from '../utils/interestCalculation';
 import { getOrganizationFilter } from '../utils/organizationHelper';
 
 const router = express.Router();
@@ -27,7 +26,7 @@ router.use(authenticate);
 router.get(
   '/audit-logs',
   requireAdmin,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: express.Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const logs = await prisma.auditLog.findMany({
       where: orgFilter,
@@ -42,7 +41,7 @@ router.get(
 // GET current interest rate (all authenticated users)
 router.get(
   '/interest-rate',
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: express.Response) => {
     // Interest rate is organization-specific, so we always use user's org
     const setting = await prisma.interestSetting.findFirst({
       where: { organizationId: req.user!.organizationId },
@@ -63,7 +62,7 @@ router.put(
   '/interest-rate',
   validate(updateInterestRateSchema),
   requireAdmin,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: express.Response) => {
     const { annualRate, effectiveFrom, note } = req.body;
 
     // Get previous rate
@@ -103,7 +102,7 @@ router.put(
 // GET interest rate history (all authenticated users)
 router.get(
   '/interest-history',
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: express.Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const history = await prisma.interestSetting.findMany({
       where: orgFilter,
@@ -132,7 +131,7 @@ router.get(
 router.get(
   '/stats',
   requireAdmin,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: express.Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const [projects, transactions, users, bankAccount] = await Promise.all([
       prisma.project.count({ where: orgFilter }),

@@ -4,7 +4,7 @@
  * POST /api/upload/confirm - Confirm and save imported data
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import multer from 'multer';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
@@ -12,7 +12,6 @@ import { validate, confirmImportSchema } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../types';
 import { parseExcelFile, validateExcelData, calculateTotalAmount } from '../services/excelParser';
-import { convertBigIntsToNumbers } from '../utils/helpers';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -47,7 +46,7 @@ const safeParseDate = (dateValue: any): Date | null => {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760') },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel'
@@ -65,7 +64,7 @@ router.post(
   '/excel',
   authenticate,
   upload.single('file'),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     console.log('📤 Upload request received');
     console.log('📎 File:', req.file ? `${req.file.originalname} (${req.file.size} bytes)` : 'NO FILE');
 
@@ -109,7 +108,7 @@ router.post(
   '/confirm',
   authenticate,
   validate(confirmImportSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { projectData, transactionsData } = req.body;
 
     await prisma.$transaction(async (tx) => {

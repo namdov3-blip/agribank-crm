@@ -6,14 +6,13 @@
  * DELETE /api/users/:id - Delete user
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import { validate, createUserSchema, updateUserSchema } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
 import { AuthRequest } from '../types';
-import { convertBigIntsToNumbers } from '../utils/helpers';
 import { getOrganizationFilter, SUPER_ADMIN_PERMISSION } from '../utils/organizationHelper';
 
 const router = express.Router();
@@ -25,7 +24,7 @@ router.use(authenticate, requireAdmin);
 // GET all users
 router.get(
   '/',
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const users = await prisma.user.findMany({
       where: orgFilter,
@@ -56,7 +55,7 @@ router.get(
 router.post(
   '/',
   validate(createUserSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { username, password, organizationCode, ...userData } = req.body;
 
     // Xác định organizationId cho user mới
@@ -136,7 +135,7 @@ router.post(
 router.put(
   '/:id',
   validate(updateUserSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { password, ...updateData } = req.body;
     
     // Hash password if provided
@@ -174,7 +173,7 @@ router.put(
 // DELETE user
 router.delete(
   '/:id',
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.params.id;
 
     // Super admin có thể xóa user ở bất kỳ organization nào

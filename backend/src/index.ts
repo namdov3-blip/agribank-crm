@@ -54,7 +54,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware (development only)
 if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
     next();
   });
@@ -64,7 +64,7 @@ if (process.env.NODE_ENV === 'development') {
 // HEALTH CHECK ROUTE
 // ============================================
 
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req, res) => {
   try {
     // Test database connection
     await prisma.$queryRaw`SELECT 1`;

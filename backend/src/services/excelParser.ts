@@ -199,7 +199,7 @@ export const calculateTotalAmount = (data: ExcelRowData[]): number => {
  * @returns Array of unique project codes
  */
 export const extractProjectCodes = (data: ExcelRowData[]): string[] => {
-  const codes = data.map(row => row.projectCode).filter(code => code && code.trim() !== '');
+  const codes = data.map(row => row.projectCode).filter((code): code is string => code !== undefined && code !== null && code.trim() !== '');
   return Array.from(new Set(codes));
 };
 
@@ -230,9 +230,24 @@ export const groupByProjectCode = (data: ExcelRowData[]): Map<string, ExcelRowDa
  */
 export const getSampleExcelData = (): ExcelRowData[] => {
   return [
-    { stt: 1, name: "Vũ Văn Giản", cccd: "342432423423", maHo: "8045678-123QD-3423", qd: "123/QĐ-UBND", date: "01/12/2025", projectCode: "8045678", amount: 531695000 },
-    { stt: 2, name: "Hoàng Công Dũng", cccd: "342432423423", maHo: "8045678-123QD-3423", qd: "123/QĐ-UBND", date: "02/12/2025", projectCode: "8045678", amount: 310177100 },
-    { stt: 3, name: "Nguyễn Văn Hùng", cccd: "342432423423", maHo: "8045678-123QD-3424", qd: "123/QĐ-UBND", date: "03/12/2025", projectCode: "8045678", amount: 528815000 },
+    { 
+      spa: '', sttDS: '1', name: "Vũ Văn Giản", soQD: "123/QĐ-UBND", ngay: "01/12/2025", 
+      quyetDinh: '', tenDuAn: '', maDuAn: "8045678", loaiChiTra: '', maHoDan: "8045678-123QD-3423", 
+      tongSoTien: 531695000,
+      stt: 1, cccd: "342432423423", maHo: "8045678-123QD-3423", qd: "123/QĐ-UBND", date: "01/12/2025", projectCode: "8045678", amount: 531695000 
+    },
+    { 
+      spa: '', sttDS: '2', name: "Hoàng Công Dũng", soQD: "123/QĐ-UBND", ngay: "02/12/2025", 
+      quyetDinh: '', tenDuAn: '', maDuAn: "8045678", loaiChiTra: '', maHoDan: "8045678-123QD-3423", 
+      tongSoTien: 310177100,
+      stt: 2, cccd: "342432423423", maHo: "8045678-123QD-3423", qd: "123/QĐ-UBND", date: "02/12/2025", projectCode: "8045678", amount: 310177100 
+    },
+    { 
+      spa: '', sttDS: '3', name: "Nguyễn Văn Hùng", soQD: "123/QĐ-UBND", ngay: "03/12/2025", 
+      quyetDinh: '', tenDuAn: '', maDuAn: "8045678", loaiChiTra: '', maHoDan: "8045678-123QD-3424", 
+      tongSoTien: 528815000,
+      stt: 3, cccd: "342432423423", maHo: "8045678-123QD-3424", qd: "123/QĐ-UBND", date: "03/12/2025", projectCode: "8045678", amount: 528815000 
+    },
     // ... (add more if needed for testing)
   ];
 };

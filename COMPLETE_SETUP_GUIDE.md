@@ -789,6 +789,46 @@ npm run prisma:seed
 
 ---
 
+### Issue 8: Railway Deployment - Prisma Schema Not Found
+
+**Error:** `Error: Could not find Prisma Schema that is required for this command.`
+
+**Cause:** Railway is running build commands from the root directory, but Prisma schema is in `backend/prisma/schema.prisma`.
+
+**Solution 1: Set Root Directory (Recommended)**
+1. In Railway dashboard, go to your backend service
+2. Click "Settings" tab
+3. Find "Root Directory" section
+4. Set value to: `backend`
+5. Save and redeploy
+
+**Solution 2: Update Build Command**
+If Root Directory setting is not available, update the Build Command:
+```
+cd backend && npm install && npm run build && npx prisma migrate deploy --schema=prisma/schema.prisma && npx prisma db seed --schema=prisma/schema.prisma
+```
+
+And update Start Command:
+```
+cd backend && npm start
+```
+
+**Solution 3: Verify File Structure**
+Make sure your repository has this structure:
+```
+your-repo/
+├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma  ← Must exist here
+│   ├── package.json
+│   └── src/
+└── (other files)
+```
+
+**After fixing:** Redeploy the service in Railway.
+
+---
+
 ## Deployment Guide
 
 ### Option 1: Railway (Recommended for Beginners)
@@ -847,8 +887,8 @@ git push -u origin main
    - Railway creates database automatically
 
 4. **Configure Environment Variables:**
-   - Click on your backend service
-   - Go to "Variables" tab
+   - **Important:** Click on your **backend service** (e.g., "agribank-crm" or your service name), NOT the Postgres database
+   - Go to "Variables" tab (or "Environment Variables")
    - Add these variables:
 
    ```env
@@ -859,17 +899,26 @@ git push -u origin main
    FRONTEND_URL=https://your-frontend.vercel.app  # Will set this later
    ```
 
-5. **Configure Build Command:**
-   - Go to "Settings" tab
+5. **Configure Root Directory and Build Command:**
+   - **Still in the same backend service** (same place where you added Variables)
+   - Go to "Settings" tab (you'll see tabs like: Deployments, Metrics, Variables, Settings, etc.)
+   - **IMPORTANT:** Scroll down to find "Root Directory" section
+   - Set "Root Directory": `backend` (this tells Railway to use the backend folder as the working directory)
+   - Scroll down to find "Build Command" section
    - Set "Build Command": `npm install && npm run build && npx prisma migrate deploy && npx prisma db seed`
    - Set "Start Command": `npm start`
+   
+   **Alternative (if Root Directory setting is not available):**
+   - If you can't find "Root Directory" setting, use this build command instead:
+   - Set "Build Command": `cd backend && npm install && npm run build && npx prisma migrate deploy --schema=prisma/schema.prisma && npx prisma db seed --schema=prisma/schema.prisma`
+   - Set "Start Command": `cd backend && npm start`
 
 6. **Deploy:**
    - Click "Deploy"
    - Wait ~5 minutes for deployment
 
 7. **Get Backend URL:**
-   - In "Settings" → "Domains"
+   - Still in the same backend service → "Settings" tab → "Domains" section
    - Copy the URL (e.g., `https://agribank-backend-production.up.railway.app`)
 
 8. **Test Backend:**

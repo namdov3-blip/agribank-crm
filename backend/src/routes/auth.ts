@@ -6,7 +6,7 @@
  * GET  /api/auth/me - Get current user info
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, generateToken } from '../middleware/auth';
@@ -25,7 +25,7 @@ const prisma = new PrismaClient();
 router.post(
   '/login',
   validate(loginSchema),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: express.Request, res: Response) => {
     const { username, password } = req.body;
 
     // Find user by username (across all organizations)
@@ -105,7 +105,7 @@ router.post(
 router.post(
   '/logout',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     // Create audit log
     await prisma.auditLog.create({
       data: {
@@ -132,7 +132,7 @@ router.post(
 router.get(
   '/me',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
       include: { organization: true }

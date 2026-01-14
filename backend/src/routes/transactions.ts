@@ -8,7 +8,7 @@
  * POST   /api/transactions/:id/supplementary - Add supplementary amount
  */
 
-import express from 'express';
+import express, { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { validate, updateTransactionSchema, updateTransactionStatusSchema, addSupplementaryAmountSchema, refundTransactionSchema } from '../middleware/validation';
@@ -25,7 +25,7 @@ const prisma = new PrismaClient();
 router.get(
   '/',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { search, status, projectId } = req.query;
     const orgFilter = await getOrganizationFilter(req.user!);
 
@@ -65,7 +65,7 @@ router.get(
 router.get(
   '/:id',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const transaction = await prisma.transaction.findFirst({
       where: {
@@ -93,7 +93,7 @@ router.put(
   '/:id',
   authenticate,
   validate(updateTransactionSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const orgFilter = await getOrganizationFilter(req.user!);
     const transaction = await prisma.transaction.findFirst({
       where: {
@@ -142,7 +142,7 @@ router.patch(
   '/:id/status',
   authenticate,
   validate(updateTransactionStatusSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { status } = req.body;
     const orgFilter = await getOrganizationFilter(req.user!);
 
@@ -266,7 +266,7 @@ router.post(
   '/:id/refund',
   authenticate,
   validate(refundTransactionSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { refundedAmount } = req.body;
     const orgFilter = await getOrganizationFilter(req.user!);
 
@@ -364,7 +364,7 @@ router.post(
   '/:id/supplementary',
   authenticate,
   validate(addSupplementaryAmountSchema),
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { amount, note } = req.body;
     const orgFilter = await getOrganizationFilter(req.user!);
 
@@ -381,7 +381,6 @@ router.post(
       return;
     }
 
-    const now = new Date();
     const newSupplementaryTotal = Number(transaction.supplementaryAmount) + amount;
 
     await prisma.$transaction(async (tx) => {
