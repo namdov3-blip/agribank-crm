@@ -955,7 +955,19 @@ The application now includes automatic retry logic:
 
 ## Deployment Guide
 
-### Option 1: Railway (Recommended for Beginners)
+### Option 1: Railway Full Stack (Recommended for Beginners)
+
+**Deploy cả Backend và Database trên Railway - Đơn giản nhất!**
+
+**Why Railway Full Stack:**
+- ✅ Setup cực kỳ đơn giản (1 click cho database)
+- ✅ Tự động connect services
+- ✅ Tất cả trong 1 platform
+- ✅ Free tier: $5 credit/month, 512MB database
+- ✅ Auto HTTPS
+- ✅ GitHub integration
+
+**📖 Detailed Guide:** See `RAILWAY_FULL_DEPLOYMENT.md` for complete step-by-step instructions.
 
 **Why Railway:**
 - ✅ Easy deployment (click-based)
