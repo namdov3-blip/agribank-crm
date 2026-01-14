@@ -1111,6 +1111,11 @@ git push -u origin main
 8. **Test Backend:**
    - Open: `https://your-backend-url.railway.app/health`
    - Should see: `{"status":"healthy"}`
+   
+   **Nếu gặp lỗi "Application failed to respond":**
+   - Xem file `RAILWAY_APPLICATION_FAILED_TROUBLESHOOTING.md` để troubleshoot
+   - Check logs trong Railway dashboard → Backend Service → Logs tab
+   - Common issues: Port configuration, missing env vars, database connection
 
 ---
 
