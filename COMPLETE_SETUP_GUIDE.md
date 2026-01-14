@@ -915,21 +915,47 @@ git push -u origin main
    - In project dashboard, click "+ New"
    - Select "Database" → "PostgreSQL"
    - Railway creates database automatically
+   - **Wait for PostgreSQL service to fully deploy** (check status shows "Active")
+   - **Important:** Note the service name (usually "Postgres" or "PostgreSQL")
 
-4. **Configure Environment Variables:**
+4. **Connect PostgreSQL to Backend Service:**
+   - **Critical Step:** Click on your **PostgreSQL service** (not the backend service)
+   - Go to "Settings" tab
+   - Scroll down to "Connect" or "Service Connections" section
+   - Make sure your backend service is listed as connected
+   - If not connected, Railway should auto-connect, but you can manually verify
+
+5. **Configure Environment Variables:**
    - **Important:** Click on your **backend service** (e.g., "agribank-crm" or your service name), NOT the Postgres database
    - Go to "Variables" tab (or "Environment Variables")
-   - Add these variables:
-
+   - **Check if DATABASE_URL already exists** (Railway may auto-inject it)
+   - If DATABASE_URL is missing or empty, add it manually:
+   
    ```env
-   DATABASE_URL=${{Postgres.DATABASE_URL}}  # Railway auto-connects
+   DATABASE_URL=${{Postgres.DATABASE_URL}}
+   ```
+   
+   **Important Notes:**
+   - Replace `Postgres` with your actual PostgreSQL service name if different
+   - The format is: `${{ServiceName.DATABASE_URL}}`
+   - If your PostgreSQL service is named "PostgreSQL", use: `${{PostgreSQL.DATABASE_URL}}`
+   - You can check the service name in the PostgreSQL service's "Settings" → "Name"
+   
+   - Add other required variables:
+   
+   ```env
    JWT_SECRET=your-production-secret-change-this-min-32-chars
    PORT=3001
    NODE_ENV=production
    FRONTEND_URL=https://your-frontend.vercel.app  # Will set this later
    ```
+   
+   **Verify DATABASE_URL:**
+   - After adding, click on the variable to see its resolved value
+   - It should show a PostgreSQL connection string (not empty)
+   - If it shows empty or `${{Postgres.DATABASE_URL}}` literally, the reference is wrong
 
-5. **Configure Root Directory and Build Command:**
+6. **Configure Root Directory and Build Command:**
    - **Still in the same backend service** (same place where you added Variables)
    - Go to "Settings" tab (you'll see tabs like: Deployments, Metrics, Variables, Settings, etc.)
    - **IMPORTANT:** Scroll down to find "Root Directory" section
@@ -949,11 +975,11 @@ git push -u origin main
    - `prisma db seed` - Seed initial data
    - `node dist/index.js` - Start the server
 
-6. **Deploy:**
+7. **Deploy:**
    - Click "Deploy"
    - Wait ~5 minutes for deployment
 
-7. **Get Backend URL:**
+8. **Get Backend URL:**
    - Still in the same backend service → "Settings" tab → "Domains" section
    - Copy the URL (e.g., `https://agribank-backend-production.up.railway.app`)
 
