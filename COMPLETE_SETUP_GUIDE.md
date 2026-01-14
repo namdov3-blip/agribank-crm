@@ -1116,6 +1116,12 @@ git push -u origin main
    - Xem file `RAILWAY_APPLICATION_FAILED_TROUBLESHOOTING.md` để troubleshoot
    - Check logs trong Railway dashboard → Backend Service → Logs tab
    - Common issues: Port configuration, missing env vars, database connection
+   
+   **Nếu logs show "Can't reach database server":**
+   - Xem file `RAILWAY_DATABASE_CONNECTION_FIX.md` để fix
+   - Check PostgreSQL service status phải "Active"
+   - Đợi PostgreSQL deploy xong trước khi deploy backend
+   - Verify DATABASE_URL không empty
 
 ---
 
